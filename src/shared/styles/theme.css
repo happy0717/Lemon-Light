@@ -1,0 +1,120 @@
+:root {
+  --bg-0: #07080a;
+  --bg-1: #0d0f13;
+  --bg-2: #13161c;
+  --bg-3: #1a1e26;
+  --glass: rgba(13, 15, 19, 0.82);
+  --glass-light: rgba(19, 22, 28, 0.72);
+  --stroke: rgba(255, 255, 255, 0.07);
+  --stroke-strong: rgba(255, 255, 255, 0.14);
+  --gold: #d9ab55;
+  --gold-bright: #f2d28a;
+  --gold-deep: #8a6a2a;
+  --up: #e5484d;
+  --up-soft: rgba(229, 72, 77, 0.16);
+  --down: #26a878;
+  --down-soft: rgba(38, 168, 120, 0.16);
+  --flat: #7d8590;
+  --text-1: #e9ecf1;
+  --text-2: #9aa2ad;
+  --text-3: #5c646f;
+  --mono: 'Cascadia Code', 'JetBrains Mono', Consolas, 'SF Mono', ui-monospace, monospace;
+  --sans: 'HarmonyOS Sans SC', 'MiSans', 'Microsoft YaHei UI', 'Microsoft YaHei', 'PingFang SC',
+    system-ui, sans-serif;
+  --radius-s: 8px;
+  --radius-m: 12px;
+  --radius-l: 18px;
+  --shadow-float: 0 12px 40px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  background: transparent;
+  font-family: var(--sans);
+  color: var(--text-1);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  overflow: hidden;
+}
+
+.num {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.up {
+  color: var(--up);
+}
+
+.down {
+  color: var(--down);
+}
+
+.flat {
+  color: var(--flat);
+}
+
+.glass-panel {
+  background: var(--glass);
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  border: 1px solid var(--stroke);
+  box-shadow: var(--shadow-float);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fade-in 0.24s ease both;
+}

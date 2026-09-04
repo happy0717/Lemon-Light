@@ -1,0 +1,9 @@
+node_modules/
+out/
+dist/
+release/
+.dev-user-data/
+.cache/
+*.log
+.DS_Store
+dist-fresh*/

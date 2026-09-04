@@ -1,0 +1,63 @@
+{
+  "name": "lemon-light",
+  "productName": "Lemon Light",
+  "version": "1.0.0",
+  "description": "Lemon Light（柠檬灯）盯盘软件 —— 有酸有甜，照亮前路；flag 你 happy 我不 happy，有人快乐就有人哭泣。支持 A 股 / 港股 / 美股的行情悬浮球、底部横幅、自选股、价格预警与持仓盈亏。",
+  "main": "./out/main/index.mjs",
+  "author": "Happy0717",
+  "license": "MIT",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "pack": "electron-vite build && electron-builder --win",
+    "icon": "node scripts/gen-icon.mjs"
+  },
+  "dependencies": {
+    "pinia": "^4.0.3",
+    "vue": "^3.5.42"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.8",
+    "electron": "^44.1.1",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^5.0.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.2"
+  },
+  "build": {
+    "appId": "com.lemonlight.desktop",
+    "productName": "Lemon Light",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "out/**/*",
+      "resources/icon.png",
+      "resources/tray.png"
+    ],
+    "win": {
+      "icon": "resources/icon.png",
+      "executableName": "LemonLight",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    },
+    "portable": {
+      "artifactName": "LemonLight-${version}-portable.exe"
+    }
+  }
+}
