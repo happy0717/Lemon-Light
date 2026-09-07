@@ -445,6 +445,10 @@ npm run icon
 
 ***
 
+## 致谢
+
+本项目在 [LINUX DO](https://linux.do) 社区开源推广发布，感谢社区提供的交流氛围与佬友们的反馈建议。
+
 ## License
 
 [LICENSE](./LICENSE) —— MIT License
