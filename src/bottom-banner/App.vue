@@ -10,7 +10,7 @@ import {
   hexToRgba,
   readableOnBackground
 } from '../shared/format'
-import { anyMarketOpen } from '@shared/market-hours'
+import { anyMarketOpen, anyMarketOverlayShown } from '@shared/market-hours'
 import { MARKET_INDEXES } from '@shared/symbol'
 import type { Quote } from '@shared/types'
 
@@ -171,7 +171,7 @@ function evalAutoHide(): void {
     return
   }
   const symbols = [...db.db.watchlist, ...bannerSettings.value.marketIndexSymbols]
-  hidden.value = !anyMarketOpen(symbols)
+  hidden.value = !anyMarketOverlayShown(symbols)
 }
 
 function reportHeight(): void {

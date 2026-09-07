@@ -1,7 +1,7 @@
 import type { AlertFireDetail, Quote, QuotesPayload, StockAlert } from './types'
 import { fetchTencentQuotes } from './sources/tencent'
 import { fetchEastmoneyQuote } from './sources/eastmoney'
-import { anyMarketOpen, nextMarketOpen } from './market-hours'
+import { anyMarketFetchOpen, nextMarketOpen } from './market-hours'
 
 type BroadcastFn = (payload: QuotesPayload) => void
 type AlertFireFn = (alert: StockAlert, quote: Quote, detail: AlertFireDetail) => void
@@ -61,7 +61,7 @@ export class QuoteService {
   start(): void {
     if (this.running) return
     this.running = true
-    this.scheduleNext(500)
+    this.scheduleNext(1500)
   }
 
   stop(): void {
@@ -91,7 +91,7 @@ export class QuoteService {
       return
     }
 
-    if (!anyMarketOpen(this.symbols)) {
+    if (!anyMarketFetchOpen(this.symbols)) {
       this.closedRetryCount = 0
       this.scheduleNext(Math.max(1000, nextMarketOpen(this.symbols) - Date.now()))
       return
@@ -108,8 +108,10 @@ export class QuoteService {
       this.closedRetryCount++
       if (this.closedRetryCount >= CLOSED_RETRY_LIMIT) {
         this.closedRetryCount = 0
-        this.scheduleNext(Math.max(60_000, nextMarketOpen(this.symbols) - Date.now()))
-        return
+        if (!anyMarketFetchOpen(this.symbols)) {
+          this.scheduleNext(Math.max(60_000, nextMarketOpen(this.symbols) - Date.now()))
+          return
+        }
       }
     } else {
       this.closedRetryCount = 0

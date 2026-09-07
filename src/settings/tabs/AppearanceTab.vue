@@ -235,6 +235,7 @@ function toggleMainIndex(symbol: string): void {
           {{ banner.autoHide ? '开' : '关' }}
         </button>
       </div>
+      <p class="mode-desc">开启后每日开盘前 5 分钟即提前显示（可观察竞价/开盘价），收盘后 30 分钟内保持显示尾盘价，其余休市时段自动隐藏。</p>
 
       <div class="row-line">
         <span class="line-label">滚动速度</span>
@@ -404,7 +405,7 @@ function toggleMainIndex(symbol: string): void {
         />
         <span class="num slider-value">{{ ballPanelAppr.opacity }}%</span>
       </div>
-      <p class="tip">长按悬浮球即可拖动位置，松开后自动记忆；单击悬浮球展开完整面板，移开后自动收起。休市自动隐藏开启后，自选覆盖的市场全部休市（含午休与周末）时悬浮球自动隐藏，开市自动恢复。面板背景色只作用于展开面板，与底部横幅配色相互独立。</p>
+      <p class="tip">长按悬浮球即可拖动位置，松开后自动记忆；单击悬浮球展开完整面板，移开后自动收起。休市自动隐藏开启后，自选覆盖的市场全部休市（含午休与周末）时悬浮球自动隐藏；每日开盘前 5 分钟即提前显示以观察竞价/开盘价，收盘后 30 分钟内保持显示尾盘价。面板背景色只作用于展开面板，与底部横幅配色相互独立。</p>
     </div>
 
     <h3 class="section-title">老板键</h3>

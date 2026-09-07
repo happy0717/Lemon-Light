@@ -102,7 +102,9 @@ export class FloatingBallWindow {
     })
     this.win.on('closed', () => (this.win = null))
     this.win.once('ready-to-show', () => {
-      if (this.showGate()) this.win?.show()
+      setTimeout(() => {
+        if (this.win && !this.win.isDestroyed() && this.showGate()) this.win.show()
+      }, 120)
     })
 
     this.win.webContents.setWindowOpenHandler(({ url }) => {
@@ -242,7 +244,10 @@ export class BannerWindow {
     this.win.setIgnoreMouseEvents(false)
     this.win.on('closed', () => (this.win = null))
     this.win.once('ready-to-show', () => {
-      if (windowShowGate()) this.win?.show()
+      const delay = 200 + this.screenIndex * 180
+      setTimeout(() => {
+        if (this.win && !this.win.isDestroyed() && windowShowGate()) this.win.show()
+      }, delay)
     })
     loadRenderer(this.win, 'bottom-banner', {
       screen: String(this.screenIndex),

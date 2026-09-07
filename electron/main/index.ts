@@ -5,7 +5,7 @@ import { QuoteService } from '@shared/quote-service'
 import { searchTencent, fetchTencentDailyKline } from '@shared/sources/tencent'
 import { searchEastmoney } from '@shared/sources/eastmoney'
 import type { AlertFireDetail, AlertLogItem, AppSettings, Database, Quote, StockAlert } from '@shared/types'
-import { anyMarketOpen } from '@shared/market-hours'
+import { anyMarketOpen, anyMarketOverlayShown } from '@shared/market-hours'
 import { FloatingBallWindow, BannerWindow, estimateBannerHeight, setWindowShowGate } from './windows'
 import { createTray, refreshTrayMenu } from './tray'
 import { exportBackup, parseBackupFile, applyBackup } from './backup'
@@ -54,7 +54,7 @@ function allQuoteSymbols(): string[] {
 
 function recomputeOverlayDesired(): void {
   const settings = currentSettings()
-  const marketOpen = anyMarketOpen(allQuoteSymbols())
+  const marketOpen = anyMarketOverlayShown(allQuoteSymbols())
   desiredBallShown =
     !bossHide &&
     settings.floatingBall.visible &&
@@ -628,7 +628,7 @@ if (!gotLock) {
 
     quoteService.start()
     setInterval(() => applyOverlayVisibility(), 30_000)
-    createSettingsWindow()
+    setTimeout(() => createSettingsWindow(), 1800)
   })
 
   app.on('window-all-closed', () => {

@@ -41,6 +41,9 @@ const US_RULE: SessionRule = {
 
 const RULES: Record<Market, SessionRule> = { cn: CN_RULE, hk: HK_RULE, us: US_RULE }
 
+export const OPEN_LEAD_MINUTES = 5
+export const CLOSE_TRAIL_MINUTES = 30
+
 function timeInZone(date: Date, timeZone: string): { minutes: number; weekday: number } {
   const fmt = new Intl.DateTimeFormat('en-US', {
     timeZone,
@@ -83,6 +86,42 @@ export function anyMarketOpen(symbols: string[], now: Date = new Date()): boolea
   return false
 }
 
+function inSessionWindow(
+  rule: SessionRule,
+  now: Date,
+  withLead: boolean,
+  withTrail: boolean
+): boolean {
+  const { minutes, weekday } = timeInZone(now, rule.timeZone)
+  if (!rule.weekday.includes(weekday)) return false
+  const last = rule.sessions.length - 1
+  return rule.sessions.some((s, i) => {
+    const start = toMinutes(s.start) - (withLead && i === 0 ? OPEN_LEAD_MINUTES : 0)
+    const end = toMinutes(s.end) + (withTrail && i === last ? CLOSE_TRAIL_MINUTES : 0)
+    return minutes >= start && minutes < end
+  })
+}
+
+export function isMarketFetchOpen(market: Market, now: Date = new Date()): boolean {
+  return inSessionWindow(RULES[market], now, true, false)
+}
+
+export function isMarketOverlayShown(market: Market, now: Date = new Date()): boolean {
+  return inSessionWindow(RULES[market], now, true, true)
+}
+
+export function anyMarketFetchOpen(symbols: string[], now: Date = new Date()): boolean {
+  const markets = new Set(symbols.map(detectMarket))
+  for (const m of markets) if (isMarketFetchOpen(m, now)) return true
+  return false
+}
+
+export function anyMarketOverlayShown(symbols: string[], now: Date = new Date()): boolean {
+  const markets = new Set(symbols.map(detectMarket))
+  for (const m of markets) if (isMarketOverlayShown(m, now)) return true
+  return false
+}
+
 function nextOpenTimeForRule(rule: SessionRule, now: Date): number {
   const stepMs = 60_000
   const maxScanMs = 8 * 24 * 60 * 60 * 1000
@@ -90,7 +129,10 @@ function nextOpenTimeForRule(rule: SessionRule, now: Date): number {
     const d = new Date(t)
     const { minutes, weekday } = timeInZone(d, rule.timeZone)
     if (!rule.weekday.includes(weekday)) continue
-    if (rule.sessions.some((s) => toMinutes(s.start) === minutes)) return t
+    const targets = rule.sessions.map((s, i) =>
+      toMinutes(s.start) - (i === 0 ? OPEN_LEAD_MINUTES : 0)
+    )
+    if (targets.includes(minutes)) return t
   }
   return now.getTime() + 60_000
 }
