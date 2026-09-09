@@ -426,8 +426,12 @@ onBeforeUnmount(() => {
                   >
                     <span class="p-name">{{ q.name }}</span>
                     <span class="p-price num" :class="trend(q)">{{ formatPrice(q.price, q) }}</span>
-                    <span class="p-change num" :class="trend(q)">
-                      {{ flipText(q) }}
+                    <span class="p-change num flip-box" :class="trend(q)">
+                      <template v-if="bannerSettings.flipChangeAmount">
+                        <span class="flip-shadow">{{ formatChangePercent(q.changePercent) }}</span>
+                        <span class="flip-shadow">{{ changeAmount(q) }}</span>
+                      </template>
+                      <span class="flip-cur">{{ flipText(q) }}</span>
                     </span>
                     <span v-if="pnlOf(q.symbol)" class="p-pnl num" :class="trendClass(pnlOf(q.symbol)!.percent)">
                       {{ pnlText(q.symbol) }}
@@ -472,8 +476,10 @@ onBeforeUnmount(() => {
                     <span class="c-price num">{{ formatPrice(q.price, q) }}</span>
                   </div>
                   <div class="cell-bot">
-                    <span v-if="bannerSettings.flipChangeAmount" class="c-chg num">
-                      {{ flipText(q) }}
+                    <span v-if="bannerSettings.flipChangeAmount" class="c-chg num flip-box">
+                      <span class="flip-shadow">{{ formatChangePercent(q.changePercent) }}</span>
+                      <span class="flip-shadow">{{ changeAmount(q) }}</span>
+                      <span class="flip-cur">{{ flipText(q) }}</span>
                     </span>
                     <span v-else class="c-chg num">
                       {{ changeAmount(q) }}
@@ -518,7 +524,13 @@ onBeforeUnmount(() => {
                 >
                   <span class="p-name">{{ q.name }}</span>
                   <span class="p-price num">{{ formatPrice(q.price, q) }}</span>
-                  <span class="p-change num">{{ flipText(q) }}</span>
+                  <span class="p-change num flip-box">
+                    <template v-if="bannerSettings.flipChangeAmount">
+                      <span class="flip-shadow">{{ formatChangePercent(q.changePercent) }}</span>
+                      <span class="flip-shadow">{{ changeAmount(q) }}</span>
+                    </template>
+                    <span class="flip-cur">{{ flipText(q) }}</span>
+                  </span>
                   <span v-if="pnlOf(q.symbol)" class="p-pnl num" :class="trendClass(pnlOf(q.symbol)!.percent)">
                     {{ pnlText(q.symbol) }}
                   </span>
@@ -775,6 +787,21 @@ onBeforeUnmount(() => {
 .p-change {
   font-size: calc(var(--bf) * 0.9);
   font-weight: 500;
+}
+
+.flip-box {
+  display: inline-grid;
+}
+
+.flip-shadow,
+.flip-cur {
+  grid-area: 1 / 1;
+  white-space: nowrap;
+}
+
+.flip-shadow {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .p-pnl {

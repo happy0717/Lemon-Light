@@ -364,9 +364,9 @@ npm run icon
 
 打包产物说明（执行 `npm run pack` 后生成于 `dist/`）：
 
-- `dist/Lemon Light Setup 1.0.3.exe` —— **NSIS 安装版**：可自定义安装目录、创建桌面快捷方式；
+- `dist/Lemon Light Setup 1.0.4.exe` —— **NSIS 安装版**：可自定义安装目录、创建桌面快捷方式；
 
-- `dist/LemonLight-1.0.3-portable.exe` —— **单文件便携版（无需安装）**：双击直接运行，
+- `dist/LemonLight-1.0.4-portable.exe` —— **单文件便携版（无需安装）**：双击直接运行，
   数据自动存放在 exe 同级的 `LemonLightData/` 目录，拷贝整个目录即可整机迁移；
 
 - `dist/win-unpacked/LemonLight.exe` —— 解包目录中的绿色可执行文件（供调试，非单文件）。
