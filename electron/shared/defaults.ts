@@ -28,7 +28,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
     fontFamily: '',
     fontWeight: 400,
     customPositions: {},
-    showHoldingsPnl: false
+    showHoldingsPnl: false,
+    flipChangeAmount: false
   },
   bannerAppearance: {
     backgroundColor: '#101216',

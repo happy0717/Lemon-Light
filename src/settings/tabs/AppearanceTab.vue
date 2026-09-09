@@ -382,6 +382,22 @@ function toggleMainIndex(symbol: string): void {
         <b>持仓盈亏金额 | 收益率</b>（按最新价与含佣金税费的持仓成本实时估算），并随盈亏方向变色。
         未记录持仓的股票不受影响。请注意：当日涨幅反映当天价格变动，持仓盈亏是自买入以来的累计结果，两者含义不同，不要混淆。默认关闭。
       </p>
+
+      <div class="row-line">
+        <span class="line-label">涨跌幅/涨跌额翻转</span>
+        <button
+          class="switch"
+          :class="{ on: banner.flipChangeAmount }"
+          @click="patchBanner({ flipChangeAmount: !banner.flipChangeAmount })"
+        >
+          {{ banner.flipChangeAmount ? '开' : '关' }}
+        </button>
+      </div>
+      <p class="mode-desc">
+        开启后，横幅内每只股票的涨跌字段会<b>每 2 秒在「涨跌幅」与「涨跌额」之间翻转</b>
+        （例如 +9.41% ⇄ +0.08），三种布局统一生效，颜色随当日涨跌保持一致。默认关闭：rows / dual
+        仅显示涨跌幅，堆叠布局显示「涨跌额 + 涨跌幅」。
+      </p>
     </div>
 
     <h3 class="section-title">悬浮球</h3>

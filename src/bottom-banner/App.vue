@@ -27,7 +27,9 @@ const displayKey = params.get('did') ?? '0'
 
 const hidden = ref(false)
 const dragActive = ref(false)
+const showFlipAmount = ref(false)
 let autoHideTimer: number | null = null
+let flipTimer: number | null = null
 let pressTimer: number | null = null
 let pressStarted = false
 let pressPos = { screenX: 0, screenY: 0 }
@@ -311,6 +313,11 @@ function changeAmount(q: Quote): string {
   return `${q.change > 0 ? '+' : ''}${q.change.toFixed(2)}`
 }
 
+function flipText(q: Quote): string {
+  if (!bannerSettings.value.flipChangeAmount) return formatChangePercent(q.changePercent)
+  return showFlipAmount.value ? changeAmount(q) : formatChangePercent(q.changePercent)
+}
+
 function trend(q: Quote): string {
   return trendClass(q.changePercent)
 }
@@ -324,6 +331,11 @@ onMounted(async () => {
   await quotes.init()
   evalAutoHide()
   autoHideTimer = window.setInterval(evalAutoHide, 60_000)
+  flipTimer = window.setInterval(() => {
+    if (bannerSettings.value.flipChangeAmount) {
+      showFlipAmount.value = !showFlipAmount.value
+    }
+  }, 2000)
   window.addEventListener('pointermove', onPointerMove)
   window.addEventListener('pointerup', onPointerUp)
   requestAnimationFrame(reportHeight)
@@ -347,6 +359,7 @@ watch(
 
 onBeforeUnmount(() => {
   if (autoHideTimer !== null) clearInterval(autoHideTimer)
+  if (flipTimer !== null) clearInterval(flipTimer)
   clearPressTimer()
   window.removeEventListener('pointermove', onPointerMove)
   window.removeEventListener('pointerup', onPointerUp)
@@ -414,7 +427,7 @@ onBeforeUnmount(() => {
                     <span class="p-name">{{ q.name }}</span>
                     <span class="p-price num" :class="trend(q)">{{ formatPrice(q.price, q) }}</span>
                     <span class="p-change num" :class="trend(q)">
-                      {{ formatChangePercent(q.changePercent) }}
+                      {{ flipText(q) }}
                     </span>
                     <span v-if="pnlOf(q.symbol)" class="p-pnl num" :class="trendClass(pnlOf(q.symbol)!.percent)">
                       {{ pnlText(q.symbol) }}
@@ -459,7 +472,10 @@ onBeforeUnmount(() => {
                     <span class="c-price num">{{ formatPrice(q.price, q) }}</span>
                   </div>
                   <div class="cell-bot">
-                    <span class="c-chg num">
+                    <span v-if="bannerSettings.flipChangeAmount" class="c-chg num">
+                      {{ flipText(q) }}
+                    </span>
+                    <span v-else class="c-chg num">
                       {{ changeAmount(q) }}
                       {{ formatChangePercent(q.changePercent) }}
                     </span>
@@ -502,7 +518,7 @@ onBeforeUnmount(() => {
                 >
                   <span class="p-name">{{ q.name }}</span>
                   <span class="p-price num">{{ formatPrice(q.price, q) }}</span>
-                  <span class="p-change num">{{ formatChangePercent(q.changePercent) }}</span>
+                  <span class="p-change num">{{ flipText(q) }}</span>
                   <span v-if="pnlOf(q.symbol)" class="p-pnl num" :class="trendClass(pnlOf(q.symbol)!.percent)">
                     {{ pnlText(q.symbol) }}
                   </span>

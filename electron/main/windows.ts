@@ -229,6 +229,7 @@ export class BannerWindow {
       frame: false,
       transparent: true,
       backgroundColor: '#00000000',
+      icon: join(__dirname, '../../resources/icon.png'),
       resizable: false,
       maximizable: false,
       skipTaskbar: true,

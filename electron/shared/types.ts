@@ -183,6 +183,7 @@ export interface AppSettings {
     fontWeight: number
     customPositions: Record<string, BannerCustomPosition>
     showHoldingsPnl: boolean
+    flipChangeAmount: boolean
   }
   bannerAppearance: {
     backgroundColor: string
