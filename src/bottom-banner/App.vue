@@ -10,6 +10,7 @@ import {
   hexToRgba,
   readableOnBackground
 } from '../shared/format'
+import { computeHoldings } from '../shared/holdings'
 import { anyMarketOpen, anyMarketOverlayShown } from '@shared/market-hours'
 import { MARKET_INDEXES } from '@shared/symbol'
 import type { Quote } from '@shared/types'
@@ -67,6 +68,29 @@ function toQuotes(symbols: string[]): Quote[] {
 }
 
 const stockQuotes = computed(() => toQuotes(screenSymbols.value))
+
+const showHoldingsPnl = computed(() => bannerSettings.value.showHoldingsPnl)
+const holdingPnlMap = computed(() => {
+  const map = new Map<string, { profit: number; percent: number }>()
+  for (const s of computeHoldings(db.db.holdings, quotes.state.quotes)) {
+    map.set(s.symbol, { profit: s.profit, percent: s.profitPercent })
+  }
+  return map
+})
+
+function pnlOf(symbol: string): { profit: number; percent: number } | null {
+  if (!showHoldingsPnl.value) return null
+  return holdingPnlMap.value.get(symbol) ?? null
+}
+
+function signMoney(value: number): string {
+  return `${value > 0 ? '+' : ''}${value.toFixed(2)}`
+}
+
+function pnlText(symbol: string): string {
+  const p = pnlOf(symbol)
+  return p ? `盈亏 ${signMoney(p.profit)} | ${formatChangePercent(p.percent)}` : ''
+}
 
 const rowLines = computed(() => {
   const all = stockQuotes.value
@@ -392,6 +416,9 @@ onBeforeUnmount(() => {
                     <span class="p-change num" :class="trend(q)">
                       {{ formatChangePercent(q.changePercent) }}
                     </span>
+                    <span v-if="pnlOf(q.symbol)" class="p-pnl num" :class="trendClass(pnlOf(q.symbol)!.percent)">
+                      {{ pnlText(q.symbol) }}
+                    </span>
                   </div>
                 </template>
                 <span v-else-if="line.index" class="empty-hint">
@@ -438,6 +465,9 @@ onBeforeUnmount(() => {
                     </span>
                     <span class="c-tag">{{ marketTag(q) }}</span>
                   </div>
+                  <div v-if="pnlOf(q.symbol)" class="cell-pnl num" :class="trendClass(pnlOf(q.symbol)!.percent)">
+                    {{ pnlText(q.symbol) }}
+                  </div>
                 </div>
                 <span v-if="stackedLine.empty" class="empty-hint">自选列表为空 · 打开设置添加</span>
               </div>
@@ -473,6 +503,9 @@ onBeforeUnmount(() => {
                   <span class="p-name">{{ q.name }}</span>
                   <span class="p-price num">{{ formatPrice(q.price, q) }}</span>
                   <span class="p-change num">{{ formatChangePercent(q.changePercent) }}</span>
+                  <span v-if="pnlOf(q.symbol)" class="p-pnl num" :class="trendClass(pnlOf(q.symbol)!.percent)">
+                    {{ pnlText(q.symbol) }}
+                  </span>
                 </div>
                 <span v-if="stockQuotes.length === 0" class="empty-hint">自选列表为空</span>
               </div>
@@ -728,6 +761,15 @@ onBeforeUnmount(() => {
   font-weight: 500;
 }
 
+.p-pnl {
+  font-size: calc(var(--bf) * 0.8);
+  font-weight: 600;
+}
+
+.p-pnl.up { color: var(--up); }
+.p-pnl.down { color: var(--down); }
+.p-pnl.flat { color: var(--flat); }
+
 .p-price.up, .p-change.up { color: var(--up); }
 .p-price.down, .p-change.down { color: var(--down); }
 .p-price.flat, .p-change.flat { color: var(--flat); }
@@ -787,6 +829,16 @@ onBeforeUnmount(() => {
 .cell.up .c-price, .cell.up .c-chg { color: var(--up); }
 .cell.down .c-price, .cell.down .c-chg { color: var(--down); }
 .cell.flat .c-price, .cell.flat .c-chg { color: var(--flat); }
+
+.cell-pnl {
+  font-size: calc(var(--bf) * 0.78);
+  font-weight: 600;
+  align-self: flex-start;
+}
+
+.cell-pnl.up { color: var(--up); }
+.cell-pnl.down { color: var(--down); }
+.cell-pnl.flat { color: var(--flat); }
 
 .meta-item {
   font-size: calc(var(--bf) * 0.85);

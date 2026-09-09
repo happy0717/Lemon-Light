@@ -9,11 +9,16 @@ export interface HoldingSummary {
   profitPercent: number
 }
 
+export function tradeCost(trade: HoldingTrade): number {
+  const feeTotal = (trade.commission ?? trade.fee ?? 0) + (trade.tax ?? 0)
+  return trade.price * trade.shares + feeTotal
+}
+
 export function computeHoldings(holdings: Holdings, quotes: Record<string, Quote>): HoldingSummary[] {
   const bySymbol = new Map<string, { shares: number; cost: number }>()
   for (const trade of holdings.trades) {
     const entry = bySymbol.get(trade.symbol) ?? { shares: 0, cost: 0 }
-    const value = trade.price * trade.shares + (trade.fee ?? 0)
+    const value = tradeCost(trade)
     if (trade.type === 'buy') {
       entry.shares += trade.shares
       entry.cost += value

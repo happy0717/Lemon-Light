@@ -57,9 +57,44 @@ const indexRows = computed(() =>
   }))
 )
 
-const holdingsVisible = computed(() => db.db.settings.holdingProfitVisible)
 const holdingSummaries = computed(() => computeHoldings(db.db.holdings, quotes.state.quotes))
 const totalPnl = computed(() => totalProfit(holdingSummaries.value))
+
+const stockMode = computed(() => db.db.settings.floatingBall.stockMode)
+const holdingPnlMap = computed(() => {
+  const map = new Map<string, { profit: number; percent: number }>()
+  for (const s of holdingSummaries.value) {
+    map.set(s.symbol, { profit: s.profit, percent: s.profitPercent })
+  }
+  return map
+})
+
+function pnlOf(symbol: string): { profit: number; percent: number } | null {
+  if (stockMode.value !== 'holdingPnl') return null
+  return holdingPnlMap.value.get(symbol) ?? null
+}
+
+function signMoney(value: number): string {
+  return `${value > 0 ? '+' : ''}${value.toFixed(2)}`
+}
+
+function ballTotalText(value: number): string {
+  const sign = value > 0 ? '+' : value < 0 ? '-' : ''
+  const abs = Math.abs(value)
+  const text = abs >= 10000 ? `${(abs / 10000).toFixed(2)}万` : abs.toFixed(2)
+  return `${sign}${text}`
+}
+
+const ballShowTotal = computed(
+  () => stockMode.value === 'holdingPnl' && holdingSummaries.value.length > 0
+)
+
+const ballTone = computed(() => {
+  if (ballShowTotal.value) return trendClass(totalPnl.value.percent)
+  const q = currentQuote.value
+  if (!q) return 'flat'
+  return trendClass(q.changePercent)
+})
 
 const panelStyle = computed(() => {
   const appr = db.db.settings.ballPanelAppearance
@@ -221,14 +256,21 @@ onBeforeUnmount(() => {
     <button
       v-if="!expanded"
       class="ball"
-      :class="[currentQuote ? trendClass(currentQuote.changePercent) : 'flat', { dragging, 'long-press': longPressActive }]"
+      :class="[ballTone, { dragging, 'long-press': longPressActive }]"
       @pointerdown="onBallPointerDown"
       @click="onBallClick"
       title="长按拖动位置，单击展开面板"
     >
       <span class="ball-glow"></span>
       <span class="ball-inner">
-        <template v-if="currentQuote">
+        <template v-if="ballShowTotal">
+          <span class="ball-name ball-tag">持仓收益</span>
+          <span class="ball-amt num">{{ ballTotalText(totalPnl.profit) }}</span>
+          <span class="ball-change num">
+            {{ formatChangePercent(totalPnl.percent) }}
+          </span>
+        </template>
+        <template v-else-if="currentQuote">
           <span class="ball-name">{{ currentQuote.name }}</span>
           <span class="ball-price num">{{ formatPrice(currentQuote.price, currentQuote) }}</span>
           <span class="ball-change num">
@@ -278,11 +320,23 @@ onBeforeUnmount(() => {
         >
           <span class="row-name">{{ q.name }}</span>
           <span class="row-price num">{{ formatPrice(q.price, q) }}</span>
-          <span class="row-change num">{{ formatChangePercent(q.changePercent) }}</span>
+          <template v-if="pnlOf(q.symbol)">
+            <span class="row-pnl num">
+              <span class="rp-amt" :class="trendClass(pnlOf(q.symbol)!.percent)">
+                {{ signMoney(pnlOf(q.symbol)!.profit) }}
+              </span>
+              <span class="rp-pct" :class="trendClass(pnlOf(q.symbol)!.percent)">
+                {{ formatChangePercent(pnlOf(q.symbol)!.percent) }}
+              </span>
+            </span>
+          </template>
+          <span v-else class="row-change num" :class="trendClass(q.changePercent)">
+            {{ formatChangePercent(q.changePercent) }}
+          </span>
         </div>
       </div>
 
-      <footer v-if="holdingsVisible && holdingSummaries.length" class="pnl">
+      <footer v-if="stockMode === 'holdingPnl' && holdingSummaries.length" class="pnl">
         <span class="pnl-label">持仓盈亏</span>
         <span class="num pnl-value" :class="trendClass(totalPnl.profit)">
           {{ totalPnl.profit > 0 ? '+' : '' }}{{ totalPnl.profit.toFixed(0) }}
@@ -379,8 +433,20 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
+.ball-tag {
+  font-size: 8px;
+  opacity: 0.85;
+  margin-bottom: 1px;
+}
+
 .ball-price {
   font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.ball-amt {
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: -0.02em;
 }
@@ -388,6 +454,10 @@ onBeforeUnmount(() => {
 .ball.up .ball-price { color: var(--up); }
 .ball.down .ball-price { color: var(--down); }
 .ball.flat .ball-price { color: var(--gold); }
+
+.ball.up .ball-amt { color: var(--up); }
+.ball.down .ball-amt { color: var(--down); }
+.ball.flat .ball-amt { color: var(--gold); }
 
 .ball-change {
   font-size: 9px;
@@ -557,6 +627,33 @@ onBeforeUnmount(() => {
 .row.up .row-price, .row.up .row-change { color: var(--up); }
 .row.down .row-price, .row.down .row-change { color: var(--down); }
 .row.flat .row-price, .row.flat .row-change { color: var(--flat); }
+
+.row-pnl {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.3;
+  min-width: 62px;
+  margin-left: 8px;
+}
+
+.rp-amt {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.rp-pct {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+
+.rp-amt.up { color: var(--up); }
+.rp-amt.down { color: var(--down); }
+.rp-amt.flat { color: var(--gold); }
+.rp-pct.up { color: var(--up); }
+.rp-pct.down { color: var(--down); }
+.rp-pct.flat { color: var(--gold); }
 
 .pnl {
   display: flex;

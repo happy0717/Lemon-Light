@@ -7,3 +7,4 @@ release/
 *.log
 .DS_Store
 dist-fresh*/
+.promo/

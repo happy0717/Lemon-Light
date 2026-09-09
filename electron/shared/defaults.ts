@@ -1,4 +1,4 @@
-import type { AppSettings, Database } from './types'
+import type { AppSettings, Database, Market } from './types'
 
 export const DEFAULT_SETTINGS: AppSettings = {
   refreshIntervalMs: 5000,
@@ -12,7 +12,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
     visible: true,
     position: null,
     badge: true,
-    autoHideWhenClosed: false
+    autoHideWhenClosed: false,
+    stockMode: 'dayChange'
   },
   bottomBanner: {
     visible: true,
@@ -26,7 +27,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
     fontSize: 13,
     fontFamily: '',
     fontWeight: 400,
-    customPositions: {}
+    customPositions: {},
+    showHoldingsPnl: false
   },
   bannerAppearance: {
     backgroundColor: '#101216',
@@ -40,8 +42,12 @@ export const DEFAULT_SETTINGS: AppSettings = {
     backgroundColor: '#0a0c10'
   },
   alertsEnabled: true,
-  holdingProfitVisible: true,
-  alertLogRetentionDays: 30
+  alertLogRetentionDays: 30,
+  tradeFees: {
+    cn: { commissionBps: 2.5, minCommission: 5 },
+    hk: { commissionBps: 3, minCommission: 3 },
+    us: { commissionBps: 0, minCommission: 0 }
+  }
 }
 
 export function createDefaultDatabase(): Database {
@@ -86,5 +92,19 @@ export function mergeSettings(partial: Partial<AppSettings> | undefined): AppSet
   const retention = Number(merged.alertLogRetentionDays)
   merged.alertLogRetentionDays =
     Number.isFinite(retention) && retention > 0 ? Math.floor(retention) : 0
+
+  const tfBase = { ...base.tradeFees, ...(partial.tradeFees ?? {}) }
+  for (const m of Object.keys(base.tradeFees) as Market[]) {
+    tfBase[m] = { ...base.tradeFees[m], ...(tfBase[m] ?? {}) }
+    const rule = tfBase[m]
+    rule.commissionBps = clampNonNegative(Number(rule.commissionBps))
+    rule.minCommission = clampNonNegative(Number(rule.minCommission))
+  }
+  merged.tradeFees = tfBase
   return merged
+}
+
+function clampNonNegative(value: number): number {
+  if (!Number.isFinite(value)) return 0
+  return value >= 0 ? value : 0
 }

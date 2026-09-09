@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useDbStore } from '../../shared/stores/db'
 import { useQuoteStore } from '../../shared/stores/quotes'
-import type { BannerDisplayMode, BannerFontFamily } from '@shared/types'
+import type { BannerDisplayMode, BannerFontFamily, FloatingBallStockMode } from '@shared/types'
 import { MARKET_INDEXES } from '@shared/symbol'
 
 const db = useDbStore()
@@ -151,6 +151,19 @@ const fontFamilies: Array<{ value: BannerFontFamily; label: string }> = [
   { value: 'SimHei', label: '黑体' },
   { value: 'SimSun', label: '宋体' },
   { value: 'KaiTi', label: '楷体' }
+]
+
+const ballStockModes: Array<{ value: FloatingBallStockMode; label: string; desc: string }> = [
+  {
+    value: 'dayChange',
+    label: '当日涨幅',
+    desc: '圆球与自选列表显示股票当日涨跌幅'
+  },
+  {
+    value: 'holdingPnl',
+    label: '持仓收益',
+    desc: '折叠圆球显示全部持仓的总盈亏（金额在上、百分比在下）；展开列表逐只显示持仓股的收益金额与收益率'
+  }
 ]
 
 const fontWeights = [
@@ -353,6 +366,22 @@ function toggleMainIndex(symbol: string): void {
           {{ idx.name }}
         </button>
       </div>
+
+      <div class="row-line">
+        <span class="line-label">股票后持仓盈亏</span>
+        <button
+          class="switch"
+          :class="{ on: banner.showHoldingsPnl }"
+          @click="patchBanner({ showHoldingsPnl: !banner.showHoldingsPnl })"
+        >
+          {{ banner.showHoldingsPnl ? '开' : '关' }}
+        </button>
+      </div>
+      <p class="mode-desc">
+        开启后，在「持仓盈亏」页录入过交易的股票，会在当日涨跌之后追加显示
+        <b>持仓盈亏金额 | 收益率</b>（按最新价与含佣金税费的持仓成本实时估算），并随盈亏方向变色。
+        未记录持仓的股票不受影响。请注意：当日涨幅反映当天价格变动，持仓盈亏是自买入以来的累计结果，两者含义不同，不要混淆。默认关闭。
+      </p>
     </div>
 
     <h3 class="section-title">悬浮球</h3>
@@ -374,15 +403,25 @@ function toggleMainIndex(symbol: string): void {
         </button>
       </div>
       <div class="row-line">
-        <span class="line-label">盈亏摘要</span>
-        <button
-          class="switch"
-          :class="{ on: db.db.settings.holdingProfitVisible }"
-          @click="db.patchSettings({ holdingProfitVisible: !db.db.settings.holdingProfitVisible })"
-        >
-          {{ db.db.settings.holdingProfitVisible ? '开' : '关' }}
-        </button>
+        <span class="line-label">个股显示</span>
+        <div class="mode-group">
+          <button
+            v-for="m in ballStockModes"
+            :key="m.value"
+            class="mode-btn"
+            :class="{ active: ball.stockMode === m.value }"
+            @click="patchBall({ stockMode: m.value })"
+          >
+            {{ m.label }}
+          </button>
+        </div>
       </div>
+      <p class="mode-desc">
+        {{ ballStockModes.find((m) => m.value === ball.stockMode)?.desc }}。
+        选择「持仓收益」后：折叠圆球展示的是<b>全部持仓合计的总盈亏</b>（金额在上、百分比在下，金额 ≥1 万时以「万」缩写），
+        与圆球当前轮播到哪只股票无关；展开面板的列表则对录过持仓的股票逐只显示收益金额与收益率，
+        未记录持仓的自选股自动回退显示当日涨幅；尚未录入任何持仓时圆球维持当日涨幅。数值均按最新行情实时估算并随盈亏方向变色。
+      </p>
       <div class="row-line">
         <span class="line-label">面板背景色</span>
         <input

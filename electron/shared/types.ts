@@ -108,7 +108,9 @@ export interface HoldingTrade {
   shares: number
   tradeDate: string
   createdAt: string
-  fee: number
+  fee?: number
+  commission?: number
+  tax?: number
   remark?: string
 }
 
@@ -133,6 +135,7 @@ export interface Holdings {
 
 export type BannerDisplayMode = 'primary' | 'mirror' | 'split'
 export type BannerLayout = 'rows' | 'stacked' | 'dual'
+export type FloatingBallStockMode = 'dayChange' | 'holdingPnl'
 export type BannerFontFamily =
   | ''
   | 'Microsoft YaHei'
@@ -144,6 +147,11 @@ export type BannerFontFamily =
 export interface BannerCustomPosition {
   x: number
   y: number
+}
+
+export interface TradeFeeRule {
+  commissionBps: number
+  minCommission: number
 }
 
 export interface AppSettings {
@@ -159,6 +167,7 @@ export interface AppSettings {
     position: { x: number; y: number } | null
     badge: boolean
     autoHideWhenClosed: boolean
+    stockMode: FloatingBallStockMode
   }
   bottomBanner: {
     visible: boolean
@@ -173,6 +182,7 @@ export interface AppSettings {
     fontFamily: BannerFontFamily
     fontWeight: number
     customPositions: Record<string, BannerCustomPosition>
+    showHoldingsPnl: boolean
   }
   bannerAppearance: {
     backgroundColor: string
@@ -186,8 +196,8 @@ export interface AppSettings {
     backgroundColor: string
   }
   alertsEnabled: boolean
-  holdingProfitVisible: boolean
   alertLogRetentionDays: number
+  tradeFees: Record<Market, TradeFeeRule>
 }
 
 export interface Database {
