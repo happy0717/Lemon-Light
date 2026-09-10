@@ -169,6 +169,7 @@ function manageBannerWindows(): void {
     const key = String(primary.id)
     const banner = new BannerWindow(primary.id, 0, 1, key, settings.customPositions[key] ?? null)
     banner.create(height)
+    banner.setClickThrough(settings.clickThrough)
     bannerWindows.push(banner)
   } else {
     const sorted = [...displays].sort((a, b) => a.bounds.x - b.bounds.x)
@@ -176,6 +177,7 @@ function manageBannerWindows(): void {
       const key = String(d.id)
       const banner = new BannerWindow(d.id, index, sorted.length, key, settings.customPositions[key] ?? null)
       banner.create(height)
+      banner.setClickThrough(settings.clickThrough)
       bannerWindows.push(banner)
     })
   }
@@ -228,6 +230,10 @@ function applySmartChanges(prev: AppSettings, next: AppSettings): void {
     prev.bottomBanner.visible !== next.bottomBanner.visible ||
     prev.bottomBanner.displayMode !== next.bottomBanner.displayMode
   if (bannerRebuild) manageBannerWindows()
+
+  if (prev.bottomBanner.clickThrough !== next.bottomBanner.clickThrough) {
+    for (const banner of bannerWindows) banner.setClickThrough(next.bottomBanner.clickThrough)
+  }
 
   const bossKeyChanged = JSON.stringify(prev.bossKey ?? {}) !== JSON.stringify(next.bossKey ?? {})
   if (bossKeyChanged) refreshBossKeyShortcut()
@@ -565,6 +571,9 @@ function registerIpc(): void {
     delete customPositions[did]
     storage.patchSettings({ bottomBanner: { ...bb, customPositions } })
     broadcastDbChanged('settings')
+  })
+  ipcMain.on('banner:set-ignore-mouse', (_e, did: string, ignore: boolean) => {
+    findBannerByDisplayKey(did)?.setIgnoreMouse(ignore)
   })
 }
 

@@ -29,7 +29,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
     fontWeight: 400,
     customPositions: {},
     showHoldingsPnl: false,
-    flipChangeAmount: false
+    flipChangeAmount: false,
+    clickThrough: true
   },
   bannerAppearance: {
     backgroundColor: '#101216',

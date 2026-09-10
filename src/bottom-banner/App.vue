@@ -27,6 +27,7 @@ const displayKey = params.get('did') ?? '0'
 
 const hidden = ref(false)
 const dragActive = ref(false)
+const interactive = ref(false)
 const showFlipAmount = ref(false)
 let autoHideTimer: number | null = null
 let flipTimer: number | null = null
@@ -253,6 +254,32 @@ function onPointerUp(): void {
     dragActive.value = false
     bridge.bannerDragEnd(displayKey)
   }
+  resetMouseMode()
+}
+
+function isInsideGrip(x: number, y: number): boolean {
+  const grip = document.querySelector<HTMLElement>('.grip')
+  if (!grip) return false
+  const rect = grip.getBoundingClientRect()
+  return x >= rect.left - 4 && x <= rect.right + 4 && y >= rect.top - 4 && y <= rect.bottom + 4
+}
+
+function setInteractive(want: boolean): void {
+  if (want === interactive.value) return
+  interactive.value = want
+  bridge.setBannerIgnoreMouse(displayKey, !want)
+}
+
+function resetMouseMode(): void {
+  setInteractive(!bannerSettings.value.clickThrough)
+}
+
+function onWindowMouseMove(e: MouseEvent): void {
+  if (dragActive.value || pressStarted) {
+    setInteractive(true)
+    return
+  }
+  setInteractive(!bannerSettings.value.clickThrough || isInsideGrip(e.clientX, e.clientY))
 }
 
 function onReset(): void {
@@ -338,6 +365,8 @@ onMounted(async () => {
   }, 2000)
   window.addEventListener('pointermove', onPointerMove)
   window.addEventListener('pointerup', onPointerUp)
+  window.addEventListener('mousemove', onWindowMouseMove)
+  resetMouseMode()
   requestAnimationFrame(reportHeight)
   requestAnimationFrame(() => {
     if (contentEl.value) {
@@ -357,12 +386,18 @@ watch(
   () => evalAutoHide()
 )
 
+watch(
+  () => bannerSettings.value.clickThrough,
+  () => resetMouseMode()
+)
+
 onBeforeUnmount(() => {
   if (autoHideTimer !== null) clearInterval(autoHideTimer)
   if (flipTimer !== null) clearInterval(flipTimer)
   clearPressTimer()
   window.removeEventListener('pointermove', onPointerMove)
   window.removeEventListener('pointerup', onPointerUp)
+  window.removeEventListener('mousemove', onWindowMouseMove)
   resizeObserver?.disconnect()
 })
 </script>

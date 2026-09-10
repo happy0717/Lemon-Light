@@ -184,6 +184,7 @@ export interface AppSettings {
     customPositions: Record<string, BannerCustomPosition>
     showHoldingsPnl: boolean
     flipChangeAmount: boolean
+    clickThrough: boolean
   }
   bannerAppearance: {
     backgroundColor: string

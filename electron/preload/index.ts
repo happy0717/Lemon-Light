@@ -72,7 +72,9 @@ const api = {
   bannerDragMove: (did: string, clientX: number, clientY: number): void =>
     ipcRenderer.send('banner:drag-move', did, clientX, clientY),
   bannerDragEnd: (did: string): void => ipcRenderer.send('banner:drag-end', did),
-  bannerReset: (did: string): void => ipcRenderer.send('banner:reset', did)
+  bannerReset: (did: string): void => ipcRenderer.send('banner:reset', did),
+  setBannerIgnoreMouse: (did: string, ignore: boolean): void =>
+    ipcRenderer.send('banner:set-ignore-mouse', did, ignore)
 }
 
 export type LemonLightApi = typeof api

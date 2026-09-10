@@ -190,6 +190,7 @@ export class BannerWindow {
   private custom: BannerCustomPosition | null = null
   private anchoredBottom = true
   private dragOffsets: { x: number; y: number } | null = null
+  private clickThrough = false
 
   constructor(
     displayId: number,
@@ -242,7 +243,7 @@ export class BannerWindow {
     })
     this.win.setAlwaysOnTop(true, 'screen-saver')
     this.win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-    this.win.setIgnoreMouseEvents(false)
+    this.applyMouseMode()
     this.win.on('closed', () => (this.win = null))
     this.win.once('ready-to-show', () => {
       const delay = 200 + this.screenIndex * 180
@@ -269,6 +270,20 @@ export class BannerWindow {
     } else if (this.win.isVisible()) {
       this.win.hide()
     }
+  }
+
+  setClickThrough(enabled: boolean): void {
+    this.clickThrough = enabled
+    this.applyMouseMode()
+  }
+
+  setIgnoreMouse(ignore: boolean): void {
+    if (!this.win || this.win.isDestroyed()) return
+    this.win.setIgnoreMouseEvents(ignore, { forward: true })
+  }
+
+  private applyMouseMode(): void {
+    this.setIgnoreMouse(this.clickThrough)
   }
 
   private displayArea(): Electron.Rectangle | null {

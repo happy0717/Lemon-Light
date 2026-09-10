@@ -1,7 +1,7 @@
 {
   "name": "lemon-light",
   "productName": "Lemon Light",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Lemon Light（柠檬灯）盯盘软件 —— 有酸有甜，照亮前路；flag 你 happy 我不 happy，有人快乐就有人哭泣。支持 A 股 / 港股 / 美股的行情悬浮球、底部横幅、自选股、价格预警与持仓盈亏。",
   "main": "./out/main/index.mjs",
   "author": "Happy0717",

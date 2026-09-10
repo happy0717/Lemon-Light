@@ -398,6 +398,22 @@ function toggleMainIndex(symbol: string): void {
         （例如 +9.41% ⇄ +0.08），三种布局统一生效，颜色随当日涨跌保持一致。默认关闭：rows / dual
         仅显示涨跌幅，堆叠布局显示「涨跌额 + 涨跌幅」。
       </p>
+
+      <div class="row-line">
+        <span class="line-label">鼠标穿透</span>
+        <button
+          class="switch"
+          :class="{ on: banner.clickThrough }"
+          @click="patchBanner({ clickThrough: !banner.clickThrough })"
+        >
+          {{ banner.clickThrough ? '开' : '关' }}
+        </button>
+      </div>
+      <p class="mode-desc">
+        开启后鼠标可<b>穿透横幅</b>，直接点击横幅下方的窗口与桌面图标，横幅不再遮挡操作。
+        此时横幅仅能通过<b>左侧把手</b>长按拖动、双击复位；条目拖拽排序在穿透期间不可用。
+        关闭后横幅整体恢复可交互。默认开启。
+      </p>
     </div>
 
     <h3 class="section-title">悬浮球</h3>
