@@ -413,7 +413,7 @@ onBeforeUnmount(() => {
     <div
       class="grip"
       :class="{ active: dragActive }"
-      title="长按拖动横幅位置 · 双击回到底部"
+      :title="bannerSettings.clickThrough ? undefined : '长按拖动横幅位置 · 双击回到底部'"
       @pointerdown.stop="onAreaPointerDown($event, true)"
       @dblclick.stop="onReset"
     >
@@ -455,7 +455,13 @@ onBeforeUnmount(() => {
                         i === line.items.length - 1 &&
                         copy === 1
                     }"
-                    :title="reorderEnabled ? `${q.name} ${q.symbol}（拖动调整顺序）` : `${q.name} ${q.symbol}`"
+                    :title="
+                      bannerSettings.clickThrough
+                        ? undefined
+                        : reorderEnabled
+                          ? `${q.name} ${q.symbol}（拖动调整顺序）`
+                          : `${q.name} ${q.symbol}`
+                    "
                     @pointerdown="reorderEnabled && copy === 1 ? onPillDown($event, i) : undefined"
                     @pointerenter="reorderEnabled && copy === 1 ? onPillEnter(i) : undefined"
                   >
@@ -507,7 +513,11 @@ onBeforeUnmount(() => {
                   :class="trend(q)"
                 >
                   <div class="cell-top">
-                    <span class="c-name" :title="`${q.name} ${q.symbol}`">{{ q.name }}</span>
+                    <span
+                      class="c-name"
+                      :title="bannerSettings.clickThrough ? undefined : `${q.name} ${q.symbol}`"
+                      >{{ q.name }}</span
+                    >
                     <span class="c-price num">{{ formatPrice(q.price, q) }}</span>
                   </div>
                   <div class="cell-bot">
