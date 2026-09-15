@@ -168,7 +168,7 @@ export class FloatingBallWindow {
       BALL_HIT
     )
     this.ballPos = clamped
-    this.win.setPosition(clamped.x, clamped.y)
+    this.win.setBounds({ x: clamped.x, y: clamped.y, width: BALL_HIT, height: BALL_HIT })
   }
 
   endDrag(): void {

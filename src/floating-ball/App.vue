@@ -140,6 +140,13 @@ function isInsideBall(x: number, y: number): boolean {
 }
 
 function onMouseMove(e: MouseEvent): void {
+  if (dragging.value || pressStarted) {
+    if (!interactive.value) {
+      interactive.value = true
+      bridge.setBallIgnoreMouse(false)
+    }
+    return
+  }
   const w = window.innerWidth
   const h = window.innerHeight
   const inside = expanded.value
@@ -392,6 +399,13 @@ onBeforeUnmount(() => {
 
 .ball.dragging .ball-inner {
   opacity: 0.35;
+}
+
+.ball.dragging .ball-glow,
+.ball.long-press .ball-glow {
+  animation: none;
+  opacity: 0.75;
+  transform: none;
 }
 
 .ball-glow {
