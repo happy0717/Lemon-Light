@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useDbStore } from '../../shared/stores/db'
 import { useQuoteStore } from '../../shared/stores/quotes'
 import { bridge } from '../../shared/bridge'
+import { quotePriceDigits } from '../../shared/format'
 import type { AlertBaseline, AlertLogItem, StockAlert } from '@shared/types'
 
 const db = useDbStore()
@@ -61,7 +62,7 @@ const watchOptions = computed(() =>
 function fmtValue(symbol: string, kind: 'price' | 'changePercent'): string {
   const q = quotes.state.quotes[symbol]
   if (!q) return ''
-  if (kind === 'price') return String(q.price)
+  if (kind === 'price') return q.price.toFixed(quotePriceDigits(q))
   return `${q.changePercent >= 0 ? '+' : ''}${q.changePercent.toFixed(2)}%`
 }
 
@@ -112,7 +113,7 @@ const formLive = computed(() => {
     windowMin: form.value.windowMin
   }
   if (form.value.kind === 'changePercent' && form.value.baseline === 'added') {
-    return { rolling: isRolling(probe), hit: false, hint: `将以添加时现价 ${q.price} 为基准（仅当日有效）` }
+    return { rolling: isRolling(probe), hit: false, hint: `将以添加时现价 ${q.price.toFixed(quotePriceDigits(q))} 为基准（仅当日有效）` }
   }
   const hit = isHit(probe)
   if (hit === null) return { rolling: true, hit: false, hint: `开市期间每 5 秒滚动统计，达到阈值立即告警` }
@@ -138,7 +139,7 @@ function liveOf(alert: StockAlert): { text: string; hit: boolean } {
   if (alert.kind === 'price') {
     const hit = isHit(alert)
     if (hit === null) return { text: '', hit: false }
-    return { text: `当前 ${q.price} · ${hit ? '已满足' : '未满足'}`, hit }
+    return { text: `当前 ${q.price.toFixed(quotePriceDigits(q))} · ${hit ? '已满足' : '未满足'}`, hit }
   }
   const pct = basePercent(alert)
   if (pct === null) return { text: '', hit: false }

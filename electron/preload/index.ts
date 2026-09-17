@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { Database, Quote, QuotesPayload, SearchResultItem, DailyKline, AppSettings } from '@shared/types'
 import type { BackupPreview } from '../main/backup'
+import type { UpdateActionResult, UpdateCheckResult, UpdateProgress } from '../main/updater'
 
 const api = {
   getDb: (): Promise<Database> => ipcRenderer.invoke('db:get'),
@@ -50,6 +51,18 @@ const api = {
       settings?: boolean
     }
   ): Promise<{ ok: boolean; message: string }> => ipcRenderer.invoke('backup:apply', backup, options),
+
+  checkUpdate: (): Promise<UpdateCheckResult> => ipcRenderer.invoke('update:check'),
+  downloadUpdate: (url: string, fileName: string): Promise<UpdateActionResult> =>
+    ipcRenderer.invoke('update:download', url, fileName),
+  installUpdate: (filePath: string): Promise<UpdateActionResult> =>
+    ipcRenderer.invoke('update:install', filePath),
+  openReleasePage: (): Promise<void> => ipcRenderer.invoke('update:open-page'),
+  onUpdateProgress: (cb: (progress: UpdateProgress) => void): (() => void) => {
+    const listener = (_e: unknown, payload: UpdateProgress) => cb(payload)
+    ipcRenderer.on('update:progress', listener)
+    return () => ipcRenderer.removeListener('update:progress', listener)
+  },
 
   saveBallPosition: (pos: { x: number; y: number }): void =>
     ipcRenderer.send('ball:position', pos),

@@ -1,5 +1,6 @@
 import type { Quote, SearchResultItem } from '../types'
 import { isMarketOpen } from '../market-hours'
+import { priceDigitsOf } from '../symbol'
 
 function toSecid(symbol: string): string | null {
   if (symbol.startsWith('sh')) return `1.${symbol.slice(2)}`
@@ -44,6 +45,7 @@ export async function fetchEastmoneyQuote(symbol: string): Promise<Quote | null>
     code: d.f57,
     name: d.f58,
     price: d.f43,
+    priceDigits: priceDigitsOf(symbol, d.f60),
     previousClose: d.f60,
     open: d.f46,
     high: d.f44,

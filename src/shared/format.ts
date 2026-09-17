@@ -1,8 +1,13 @@
 import type { Quote } from '@shared/types'
 
+export function quotePriceDigits(quote?: Quote): number {
+  const digits = quote?.priceDigits
+  if (typeof digits !== 'number' || !Number.isFinite(digits)) return 2
+  return Math.min(4, Math.max(2, Math.round(digits)))
+}
+
 export function formatPrice(value: number, quote?: Quote): string {
-  const digits = quote?.currencyCode === 'USD' || quote?.currencyCode === 'HKD' ? 2 : 2
-  return value.toFixed(digits)
+  return value.toFixed(quotePriceDigits(quote))
 }
 
 export function formatChangePercent(value: number): string {
@@ -10,9 +15,9 @@ export function formatChangePercent(value: number): string {
   return `${sign}${value.toFixed(2)}%`
 }
 
-export function formatChange(value: number): string {
+export function formatChange(value: number, quote?: Quote): string {
   const sign = value > 0 ? '+' : ''
-  return `${sign}${value.toFixed(2)}`
+  return `${sign}${value.toFixed(quotePriceDigits(quote))}`
 }
 
 export function formatAmount(value: number): string {

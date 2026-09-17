@@ -6,9 +6,11 @@ import { searchTencent, fetchTencentDailyKline } from '@shared/sources/tencent'
 import { searchEastmoney } from '@shared/sources/eastmoney'
 import type { AlertFireDetail, AlertLogItem, AppSettings, Database, Quote, StockAlert } from '@shared/types'
 import { anyMarketOpen, anyMarketOverlayShown } from '@shared/market-hours'
+import { priceDigitsOf } from '@shared/symbol'
 import { FloatingBallWindow, BannerWindow, estimateBannerHeight, setWindowShowGate } from './windows'
 import { createTray, refreshTrayMenu } from './tray'
 import { exportBackup, parseBackupFile, applyBackup } from './backup'
+import { checkForUpdate, downloadUpdate, installUpdate, openReleasePage } from './updater'
 
 if (process.env.LEMON_LIGHT_USER_DATA) {
   app.setPath('userData', process.env.LEMON_LIGHT_USER_DATA)
@@ -264,7 +266,7 @@ function showSystemNotification(alert: StockAlert, quote: Quote): void {
   const unit = alert.kind === 'price' ? '' : '%'
   const n = new Notification({
     title: `Lemon Light · ${quote.name} ${kindText}预警`,
-    body: `${quote.name}(${quote.symbol}) 现价 ${quote.price}，${dirText} ${alert.threshold}${unit}`,
+    body: `${quote.name}(${quote.symbol}) 现价 ${quote.price.toFixed(quote.priceDigits)}，${dirText} ${alert.threshold}${unit}`,
     silent: false
   })
   n.show()
@@ -304,7 +306,7 @@ function showAlertToast(alert: StockAlert, quote: Quote): void {
   const hh = String(now.getHours()).padStart(2, '0')
   const mm = String(now.getMinutes()).padStart(2, '0')
   const ss = String(now.getSeconds()).padStart(2, '0')
-  const priceText = Number.isFinite(quote.price) ? String(quote.price) : '--'
+  const priceText = Number.isFinite(quote.price) ? quote.price.toFixed(quote.priceDigits) : '--'
   const html = `<!doctype html><html><head><meta charset="utf-8"><style>
     *{margin:0;padding:0;box-sizing:border-box}
     body{background:transparent;font-family:"Microsoft YaHei UI","Microsoft YaHei",sans-serif;-webkit-user-select:none}
@@ -461,6 +463,7 @@ function registerIpc(): void {
       code: symbol.slice(2),
       name: symbol,
       price: 0,
+      priceDigits: priceDigitsOf(symbol),
       previousClose: 0,
       open: 0,
       high: 0,
@@ -524,6 +527,24 @@ function registerIpc(): void {
     }
     return result
   })
+
+  ipcMain.handle('update:check', () => checkForUpdate())
+  ipcMain.handle('update:download', (event, url: string, fileName: string) =>
+    downloadUpdate(url, fileName, (progress) => {
+      if (!event.sender.isDestroyed()) event.sender.send('update:progress', progress)
+    })
+  )
+  ipcMain.handle('update:install', async (_e, filePath: string) => {
+    const result = await installUpdate(filePath)
+    if (result.ok && !process.env.PORTABLE_EXECUTABLE_DIR) {
+      setTimeout(() => {
+        setQuitting(true)
+        app.quit()
+      }, 1500)
+    }
+    return result
+  })
+  ipcMain.handle('update:open-page', () => openReleasePage())
 
   ipcMain.on('ball:position', (_e, pos: { x: number; y: number }) => onBallPositionSaved(pos))
   ipcMain.on('ball:set-ignore-mouse', (_e, ignore: boolean) => ballWindow.setIgnoreMouse(ignore))

@@ -1,5 +1,5 @@
 import type { DailyKline, Quote, SearchResultItem } from '../types'
-import { detectMarket, isValidSymbol, marketLabelOf } from '../symbol'
+import { detectMarket, isValidSymbol, marketLabelOf, priceDigitsOf } from '../symbol'
 import { isMarketOpen } from '../market-hours'
 
 function decodeBuffer(buffer: ArrayBuffer, contentType: string | null): string {
@@ -47,6 +47,7 @@ function parseQuoteFields(symbol: string, fields: string[]): Quote | null {
     code: fields[2] ?? symbol.slice(2),
     name: fields[1] ?? symbol,
     price,
+    priceDigits: priceDigitsOf(symbol, previousClose),
     previousClose,
     open: parseFloat(fields[5]) || 0,
     high: parseFloat(fields[33]) || 0,

@@ -3,6 +3,7 @@ export interface Quote {
   code: string
   name: string
   price: number
+  priceDigits: number
   previousClose: number
   open: number
   high: number

@@ -6,6 +6,7 @@ import { bridge } from '../shared/bridge'
 import {
   formatChangePercent,
   formatPrice,
+  quotePriceDigits,
   trendClass,
   hexToRgba,
   readableOnBackground
@@ -337,7 +338,7 @@ function onPillEnter(index: number): void {
 }
 
 function changeAmount(q: Quote): string {
-  return `${q.change > 0 ? '+' : ''}${q.change.toFixed(2)}`
+  return `${q.change > 0 ? '+' : ''}${q.change.toFixed(quotePriceDigits(q))}`
 }
 
 function flipText(q: Quote): string {

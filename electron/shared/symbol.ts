@@ -35,6 +35,15 @@ export function marketLabelOf(symbol: string): string {
   return market === 'hk' ? '港' : '美'
 }
 
+const CN_THREE_DECIMAL_PREFIXES = ['sh5', 'sh11', 'sh20', 'sz1']
+const HK_THREE_DECIMAL_LIMIT = 0.5
+
+export function priceDigitsOf(symbol: string, refPrice = 0): number {
+  if (CN_THREE_DECIMAL_PREFIXES.some((p) => symbol.startsWith(p))) return 3
+  if (symbol.startsWith('hk') && refPrice > 0 && refPrice < HK_THREE_DECIMAL_LIMIT) return 3
+  return 2
+}
+
 const KNOWN_US_INDEXES = ['usDJI', 'usIXIC', 'usINX']
 const KNOWN_HK_INDEXES = ['hkHSI', 'hkHSTECH']
 
