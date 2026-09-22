@@ -432,7 +432,8 @@ onBeforeUnmount(() => {
           >
             <span v-for="row in indexRows" :key="row.symbol" class="idx" :class="row.q ? trend(row.q) : 'flat'">
               {{ row.name }}
-              <span class="num">{{ row.q ? formatChangePercent(row.q.changePercent) : '--' }}</span>
+              <span class="num idx-price">{{ row.q ? formatPrice(row.q.price, row.q) : '--' }}</span>
+              <span class="num idx-change">{{ row.q ? formatChangePercent(row.q.changePercent) : '--' }}</span>
             </span>
             <span class="divider"></span>
           </div>
@@ -495,7 +496,8 @@ onBeforeUnmount(() => {
           <div v-if="showIndexesHere && bannerSettings.showMarketIndexes && indexRows.length" class="index-strip">
             <span v-for="row in indexRows" :key="row.symbol" class="idx" :class="row.q ? trend(row.q) : 'flat'">
               {{ row.name }}
-              <span class="num">{{ row.q ? formatChangePercent(row.q.changePercent) : '--' }}</span>
+              <span class="num idx-price">{{ row.q ? formatPrice(row.q.price, row.q) : '--' }}</span>
+              <span class="num idx-change">{{ row.q ? formatChangePercent(row.q.changePercent) : '--' }}</span>
             </span>
             <span class="divider"></span>
           </div>
@@ -550,7 +552,8 @@ onBeforeUnmount(() => {
           <div v-if="showIndexesHere && bannerSettings.showMarketIndexes && indexRows.length" class="index-strip">
             <span v-for="row in indexRows" :key="row.symbol" class="idx" :class="row.q ? trend(row.q) : 'flat'">
               {{ row.name }}
-              <span class="num">{{ row.q ? formatChangePercent(row.q.changePercent) : '--' }}</span>
+              <span class="num idx-price">{{ row.q ? formatPrice(row.q.price, row.q) : '--' }}</span>
+              <span class="num idx-change">{{ row.q ? formatChangePercent(row.q.changePercent) : '--' }}</span>
             </span>
             <span class="divider"></span>
           </div>
@@ -733,9 +736,18 @@ onBeforeUnmount(() => {
 }
 
 .idx .num {
+  margin-left: 3px;
+}
+
+.idx .idx-price {
   font-size: calc(var(--bf) * 0.88);
   font-weight: 700;
-  margin-left: 3px;
+}
+
+.idx .idx-change {
+  font-size: calc(var(--bf) * 0.82);
+  font-weight: 500;
+  margin-left: 5px;
 }
 
 .idx.up .num { color: var(--up); }
