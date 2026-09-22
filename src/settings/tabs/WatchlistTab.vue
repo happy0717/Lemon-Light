@@ -117,6 +117,11 @@ async function addGroup(): Promise<void> {
 
 async function removeGroup(groupId: string): Promise<void> {
   await db.setGroups(db.db.groups.filter((g) => g.id !== groupId))
+  if (hiddenGroupIds.value.includes(groupId)) {
+    await patchBanner({
+      hiddenGroupIds: hiddenGroupIds.value.filter((id) => id !== groupId)
+    })
+  }
 }
 
 async function toggleGroupSymbol(groupId: string, symbol: string): Promise<void> {
@@ -128,6 +133,43 @@ async function toggleGroupSymbol(groupId: string, symbol: string): Promise<void>
     return { ...g, symbols }
   })
   await db.setGroups(groups)
+}
+
+const hiddenGroupIds = computed(() => db.db.settings.bottomBanner.hiddenGroupIds ?? [])
+
+async function patchBanner(
+  partial: Partial<typeof db.db.settings.bottomBanner>
+): Promise<void> {
+  await db.patchSettings({
+    bottomBanner: { ...db.db.settings.bottomBanner, ...partial }
+  })
+}
+
+async function toggleGroupFilter(groupId: string): Promise<void> {
+  const current = hiddenGroupIds.value
+  const next = current.includes(groupId)
+    ? current.filter((id) => id !== groupId)
+    : [...current, groupId]
+  await patchBanner({ hiddenGroupIds: next })
+}
+
+async function applyGroupOrder(): Promise<void> {
+  const list = db.db.watchlist
+  const placed = new Set<string>()
+  const ordered: string[] = []
+  for (const g of db.db.groups) {
+    for (const s of list) {
+      if (g.symbols.includes(s) && !placed.has(s)) {
+        placed.add(s)
+        ordered.push(s)
+      }
+    }
+  }
+  for (const s of list) {
+    if (!placed.has(s)) ordered.push(s)
+  }
+  if (ordered.length === list.length && ordered.every((s, i) => s === list[i])) return
+  await db.setWatchlist(ordered)
 }
 </script>
 
@@ -208,7 +250,20 @@ async function toggleGroupSymbol(groupId: string, symbol: string): Promise<void>
       </div>
     </div>
 
-    <h3 class="section-title">分组管理</h3>
+    <div class="section-head">
+      <h3 class="section-title">分组管理</h3>
+      <button
+        class="btn ghost"
+        :disabled="db.db.groups.length === 0"
+        title="把已分组的股票按分组顺序整理到自选列表最前，同组股票相邻显示；会覆盖你手动调整的顺序，请谨慎点击。"
+        @click="applyGroupOrder"
+      >
+        ↻ 整理展示顺序
+      </button>
+    </div>
+    <p class="group-hint">
+      开关默认全部开启：关闭某个分组只是把该分组内的股票从横幅隐藏，未分组的股票始终显示，新建分组也默认开启。「整理展示顺序」只调整自选列表的排列，不改变分组内容。
+    </p>
     <div class="group-add">
       <input
         v-model="newGroupName"
@@ -221,6 +276,16 @@ async function toggleGroupSymbol(groupId: string, symbol: string): Promise<void>
     <div class="group-list">
       <div v-if="db.db.groups.length === 0" class="empty slim">暂无分组</div>
       <div v-for="g in db.db.groups" :key="g.id" class="group-row">
+        <button
+          class="group-switch"
+          :class="{ on: !hiddenGroupIds.includes(g.id) }"
+          role="switch"
+          :aria-checked="!hiddenGroupIds.includes(g.id)"
+          :title="`显示「${g.name}」分组：关闭后该分组内的股票会从横幅隐藏（未分组的股票不受影响）`"
+          @click="toggleGroupFilter(g.id)"
+        >
+          <span class="knob"></span>
+        </button>
         <span class="group-color" :style="{ background: g.color }"></span>
         <span class="group-name">{{ g.name }}</span>
         <span class="group-count num">{{ g.symbols.length }} 只</span>
@@ -473,10 +538,69 @@ async function toggleGroupSymbol(groupId: string, symbol: string): Promise<void>
   padding: 16px;
 }
 
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 24px 0 8px;
+}
+
 .section-title {
-  margin: 24px 0 12px;
+  margin: 0;
   font-size: 15px;
   font-weight: 700;
+}
+
+.group-hint {
+  margin: 0 0 12px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-3);
+}
+
+.btn.ghost {
+  background: transparent;
+  color: var(--text-2);
+}
+
+.btn.ghost:not(:disabled):hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.group-switch {
+  position: relative;
+  width: 34px;
+  height: 18px;
+  flex-shrink: 0;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--stroke-strong);
+  background: var(--bg-3);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.group-switch .knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text-3);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.group-switch.on {
+  background: rgba(217, 171, 85, 0.22);
+  border-color: var(--gold);
+}
+
+.group-switch.on .knob {
+  transform: translateX(16px);
+  background: var(--gold);
 }
 
 .group-add {

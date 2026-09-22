@@ -30,7 +30,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
     customPositions: {},
     showHoldingsPnl: false,
     flipChangeAmount: false,
-    clickThrough: true
+    clickThrough: true,
+    hiddenGroupIds: []
   },
   bannerAppearance: {
     backgroundColor: '#101216',
@@ -71,6 +72,11 @@ export function mergeSettings(partial: Partial<AppSettings> | undefined): AppSet
   merged.floatingBall = { ...base.floatingBall, ...(partial.floatingBall ?? {}) }
   const banner = { ...base.bottomBanner, ...(partial.bottomBanner ?? {}) }
   delete (banner as { height?: number }).height
+  banner.hiddenGroupIds = Array.isArray(banner.hiddenGroupIds)
+    ? banner.hiddenGroupIds.filter((id) => typeof id === 'string' && id.length > 0)
+    : []
+  delete (banner as { filterGroupId?: string }).filterGroupId
+  delete (banner as { filterGroupIds?: unknown }).filterGroupIds
   merged.bottomBanner = banner
 
   const legacyPanel = (

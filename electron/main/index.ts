@@ -20,6 +20,10 @@ if (process.env.LEMON_LIGHT_USER_DATA) {
 
 app.setAppUserModelId('com.lemonlight.desktop')
 
+if (process.platform === 'win32') {
+  app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion')
+}
+
 let settingsWindow: BrowserWindow | null = null
 const ballWindow = new FloatingBallWindow((pos) => onBallPositionSaved(pos))
 const bannerWindows: BannerWindow[] = []

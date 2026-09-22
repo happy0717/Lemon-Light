@@ -188,6 +188,7 @@ export class BannerWindow {
   readonly screenIndex: number
   readonly screenTotal: number
   private custom: BannerCustomPosition | null = null
+  private customBottom: number | null = null
   private anchoredBottom = true
   private dragOffsets: { x: number; y: number } | null = null
   private clickThrough = false
@@ -216,6 +217,7 @@ export class BannerWindow {
       x = this.custom.x
       y = this.custom.y
       this.anchoredBottom = false
+      this.customBottom = y + height
     } else {
       x = area.x
       y = area.y + area.height - height
@@ -238,7 +240,8 @@ export class BannerWindow {
       show: false,
       webPreferences: {
         preload: join(__dirname, '../preload/index.mjs'),
-        sandbox: false
+        sandbox: false,
+        backgroundThrottling: false
       }
     })
     this.win.setAlwaysOnTop(true, 'screen-saver')
@@ -296,16 +299,12 @@ export class BannerWindow {
     const area = this.displayArea()
     if (!area) return
     const bounds = this.win.getBounds()
-    if (this.custom && !this.anchoredBottom) {
-      this.win.setBounds({ x: bounds.x, y: bounds.y, width: area.width, height })
-      return
-    }
-    this.win.setBounds({
-      x: area.x,
-      y: area.y + area.height - height,
-      width: area.width,
-      height
-    })
+    const anchored = !this.custom || this.anchoredBottom
+    const bottom = anchored ? area.y + area.height : (this.customBottom ?? bounds.y + bounds.height)
+    const y = Math.max(area.y, bottom - height)
+    const x = anchored ? area.x : bounds.x
+    this.win.setBounds({ x, y, width: area.width, height })
+    if (!anchored) this.custom = { x, y }
   }
 
   beginDrag(offsetX: number, offsetY: number): void {
@@ -319,20 +318,23 @@ export class BannerWindow {
     this.win.setPosition(nx, ny)
     this.custom = { x: nx, y: ny }
     this.anchoredBottom = false
+    this.customBottom = ny + this.win.getBounds().height
   }
 
   endDrag(): { displayKey: string; custom: BannerCustomPosition } | null {
     if (!this.dragOffsets) return null
     this.dragOffsets = null
     if (!this.win || this.win.isDestroyed()) return null
-    const [x, y] = this.win.getPosition()
-    this.custom = { x, y }
+    const bounds = this.win.getBounds()
+    this.custom = { x: bounds.x, y: bounds.y }
     this.anchoredBottom = false
+    this.customBottom = bounds.y + bounds.height
     return { displayKey: this.displayKey, custom: this.custom }
   }
 
   resetToBottom(): void {
     this.custom = null
+    this.customBottom = null
     this.anchoredBottom = true
     if (!this.win || this.win.isDestroyed()) return
     const area = this.displayArea()

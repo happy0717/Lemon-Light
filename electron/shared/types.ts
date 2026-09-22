@@ -186,6 +186,7 @@ export interface AppSettings {
     showHoldingsPnl: boolean
     flipChangeAmount: boolean
     clickThrough: boolean
+    hiddenGroupIds: string[]
   }
   bannerAppearance: {
     backgroundColor: string

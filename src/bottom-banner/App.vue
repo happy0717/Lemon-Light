@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useDbStore } from '../shared/stores/db'
 import { useQuoteStore } from '../shared/stores/quotes'
 import { bridge } from '../shared/bridge'
@@ -12,11 +12,14 @@ import {
   readableOnBackground
 } from '../shared/format'
 import { computeHoldings } from '../shared/holdings'
+import { packRowsFromBottom, samePack, type PackedRow } from '../shared/pack-rows'
 import { anyMarketOpen, anyMarketOverlayShown } from '@shared/market-hours'
 import { MARKET_INDEXES } from '@shared/symbol'
 import type { Quote } from '@shared/types'
 
 const LONG_PRESS_MS = 420
+const LINE_GAP = 8
+const ROW_SAFETY = 2
 
 const db = useDbStore()
 const quotes = useQuoteStore()
@@ -59,8 +62,27 @@ const indexRows = computed(() =>
   }))
 )
 
+const hiddenGroupIds = computed(() => bannerSettings.value.hiddenGroupIds ?? [])
+
+const bannerWatchlist = computed(() => {
+  const groups = db.db.groups
+  if (groups.length === 0) return db.db.watchlist
+  const hidden = new Set(hiddenGroupIds.value)
+  if (hidden.size === 0) return db.db.watchlist
+  const hiddenMembers = new Set<string>()
+  const shownMembers = new Set<string>()
+  for (const g of groups) {
+    const isHidden = hidden.has(g.id)
+    for (const s of g.symbols) {
+      if (isHidden) hiddenMembers.add(s)
+      else shownMembers.add(s)
+    }
+  }
+  return db.db.watchlist.filter((s) => !hiddenMembers.has(s) || shownMembers.has(s))
+})
+
 const screenSymbols = computed(() => {
-  const list = db.db.watchlist
+  const list = bannerWatchlist.value
   if (!isSplit.value || screenTotal <= 1) return list
   const per = Math.ceil(list.length / screenTotal)
   const start = screenIndex * per
@@ -72,6 +94,15 @@ function toQuotes(symbols: string[]): Quote[] {
 }
 
 const stockQuotes = computed(() => toQuotes(screenSymbols.value))
+
+const pillSignature = computed(() =>
+  stockQuotes.value
+    .map((q) => `${q.symbol}|${q.name}|${formatPrice(q.price, q)}|${flipText(q)}`)
+    .join('~')
+)
+
+const rulerEl = ref<HTMLElement | null>(null)
+const packedRows = ref<PackedRow[] | null>(null)
 
 const showHoldingsPnl = computed(() => bannerSettings.value.showHoldingsPnl)
 const holdingPnlMap = computed(() => {
@@ -96,32 +127,47 @@ function pnlText(symbol: string): string {
   return p ? `盈亏 ${signMoney(p.profit)} | ${formatChangePercent(p.percent)}` : ''
 }
 
+function rowPlan(total: number): Array<{ count: number; scroll: boolean }> {
+  const n = Math.min(3, Math.max(1, bannerSettings.value.rows || 1))
+  const packed = packedRows.value
+  if (packed && packed.reduce((sum, r) => sum + r.count, 0) === total) {
+    return packed.map((r) => ({ count: r.count, scroll: r.scroll }))
+  }
+  const per = Math.ceil(total / n)
+  const plan: Array<{ count: number; scroll: boolean }> = []
+  for (let i = 0; i < n; i += 1) {
+    const count = Math.max(0, Math.min(per, total - i * per))
+    if (count === 0 && i > 0) break
+    plan.push({ count, scroll: count > 12 })
+  }
+  return plan
+}
+
 const rowLines = computed(() => {
   const all = stockQuotes.value
-  if (all.length === 0) {
-    return [{ key: 'empty', index: true, items: [] as Quote[], scroll: false, static: true }]
-  }
-  const n = Math.min(3, Math.max(1, bannerSettings.value.rows || 1))
-  const per = Math.ceil(all.length / n)
-  const lines: Array<{
+  const bottomUp: Array<{
     key: string
     index: boolean
     items: Quote[]
     scroll: boolean
     static: boolean
   }> = []
-  for (let i = 0; i < n; i++) {
-    const slice = all.slice(i * per, i * per + per)
-    if (slice.length === 0 && i > 0) continue
-    lines.push({
-      key: `r${i}`,
-      index: i === 0,
-      items: slice,
-      scroll: slice.length > 12,
-      static: slice.length <= 12
+  let cursor = 0
+  rowPlan(all.length).forEach((row, r) => {
+    const items = all.slice(cursor, cursor + row.count)
+    cursor += row.count
+    bottomUp.push({
+      key: `r${r}`,
+      index: false,
+      items,
+      scroll: row.scroll,
+      static: !row.scroll
     })
+  })
+  if (bottomUp.length === 0) {
+    bottomUp.push({ key: 'r0', index: false, items: [], scroll: false, static: true })
   }
-  return lines
+  return bottomUp.reverse().map((line, i) => ({ ...line, index: i === 0 }))
 })
 
 const stackedLine = computed(() => {
@@ -206,6 +252,51 @@ function reportHeight(): void {
   const el = contentEl.value
   if (!el) return
   bridge.reportBannerContentHeight(displayKey, Math.ceil(el.getBoundingClientRect().height))
+}
+
+function measureRows(): void {
+  const root = contentEl.value
+  const ruler = rulerEl.value
+  if (!root || !ruler) return
+
+  const total = stockQuotes.value.length
+  if (total === 0) {
+    if (packedRows.value !== null) packedRows.value = null
+    return
+  }
+
+  const pills = Array.from(ruler.querySelectorAll<HTMLElement>('.pill-wrap'))
+  if (pills.length !== total) return
+
+  const widths = pills.map((el) => el.getBoundingClientRect().width)
+  let gap = 0
+  if (pills.length > 1) {
+    const pitch = pills[1]!.offsetLeft - pills[0]!.offsetLeft
+    gap = Math.max(0, pitch - (widths[0] ?? 0))
+  }
+
+  const lineEl = root.querySelector<HTMLElement>('.banner-line')
+  const lineW = lineEl ? lineEl.getBoundingClientRect().width : root.getBoundingClientRect().width
+  const scrollEls = Array.from(root.querySelectorAll<HTMLElement>('.banner-line .line-scroll'))
+  const topAvail = scrollEls[0]?.clientWidth ?? lineW
+  const plainAvail = scrollEls.length > 1 ? scrollEls[1]!.clientWidth || lineW : lineW
+  const stripEl = root.querySelector<HTMLElement>('.index-strip')
+  const stripW = stripEl ? stripEl.getBoundingClientRect().width + LINE_GAP : 0
+  const reserve = scrollEls.length > 1 ? Math.max(0, plainAvail - topAvail) : stripW
+
+  const n = Math.min(3, Math.max(1, bannerSettings.value.rows || 1))
+  const rowWidths: number[] = []
+  for (let i = 0; i < n; i += 1) {
+    rowWidths.push(Math.max(40, plainAvail - ROW_SAFETY))
+  }
+
+  const packed = packRowsFromBottom(widths, gap, rowWidths, reserve)
+  if (!samePack(packedRows.value, packed)) packedRows.value = packed
+}
+
+function relayout(): void {
+  reportHeight()
+  measureRows()
 }
 
 function clearPressTimer(): void {
@@ -368,14 +459,37 @@ onMounted(async () => {
   window.addEventListener('pointerup', onPointerUp)
   window.addEventListener('mousemove', onWindowMouseMove)
   resetMouseMode()
-  requestAnimationFrame(reportHeight)
+  requestAnimationFrame(relayout)
   requestAnimationFrame(() => {
     if (contentEl.value) {
-      resizeObserver = new ResizeObserver(reportHeight)
+      resizeObserver = new ResizeObserver(relayout)
       resizeObserver.observe(contentEl.value)
     }
   })
+  void document.fonts.ready.then(() => relayout())
 })
+
+watch(
+  () => [
+    stockQuotes.value.length,
+    bannerWatchlist.value.join(','),
+    hiddenGroupIds.value.join(','),
+    pillSignature.value,
+    bannerSettings.value.rows,
+    bannerSettings.value.layout,
+    bannerSettings.value.showMarketIndexes,
+    bannerSettings.value.fontSize,
+    bannerSettings.value.fontWeight,
+    bannerSettings.value.fontFamily,
+    bannerSettings.value.flipChangeAmount,
+    bannerSettings.value.showHoldingsPnl,
+    showIndexesHere.value,
+    indexRows.value.map((row) => row.name).join(',')
+  ],
+  () => {
+    void nextTick(() => requestAnimationFrame(relayout))
+  }
+)
 
 watch(
   () => [
@@ -481,7 +595,7 @@ onBeforeUnmount(() => {
                     </span>
                   </div>
                 </template>
-                <span v-else-if="line.index" class="empty-hint">
+                <span v-else-if="line.index && !stockQuotes.length" class="empty-hint">
                   自选列表为空 · 打开设置添加
                 </span>
               </div>
@@ -608,6 +722,23 @@ onBeforeUnmount(() => {
         </div>
       </template>
     </div>
+
+    <div ref="rulerEl" class="line-track pill-ruler" aria-hidden="true">
+      <div class="copy">
+        <div v-for="q in stockQuotes" :key="`m-${q.symbol}`" class="pill-wrap">
+          <span class="p-name">{{ q.name }}</span>
+          <span class="p-price num">{{ formatPrice(q.price, q) }}</span>
+          <span class="p-change num flip-box">
+            <template v-if="bannerSettings.flipChangeAmount">
+              <span class="flip-shadow">{{ formatChangePercent(q.changePercent) }}</span>
+              <span class="flip-shadow">{{ changeAmount(q) }}</span>
+            </template>
+            <span class="flip-cur">{{ flipText(q) }}</span>
+          </span>
+          <span v-if="pnlOf(q.symbol)" class="p-pnl num">{{ pnlText(q.symbol) }}</span>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -699,7 +830,7 @@ onBeforeUnmount(() => {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-end;
 }
 
 .banner-line {
@@ -769,6 +900,7 @@ onBeforeUnmount(() => {
 
 .line-scroll.scroll .line-track {
   animation: marquee var(--mt) linear infinite;
+  will-change: transform;
 }
 
 .line-scroll.scroll:hover .line-track {
@@ -779,6 +911,14 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   width: max-content;
+}
+
+.pill-ruler {
+  position: absolute;
+  left: -99999px;
+  top: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .copy {

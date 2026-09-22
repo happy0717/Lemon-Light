@@ -6,7 +6,7 @@ interface SessionRule {
   label: string
   timeZone: string
   weekday: number[]
-  sessions: Array<{ start: string; end: string }>
+  sessions: Array<{ start: string; end: string; lead?: number; trail?: number }>
 }
 
 const CN_RULE: SessionRule = {
@@ -15,8 +15,8 @@ const CN_RULE: SessionRule = {
   timeZone: 'Asia/Shanghai',
   weekday: [1, 2, 3, 4, 5],
   sessions: [
-    { start: '09:15', end: '11:30' },
-    { start: '13:00', end: '15:00' }
+    { start: '09:15', end: '11:30', lead: 0, trail: 5 },
+    { start: '13:00', end: '15:00', lead: 5, trail: 30 }
   ]
 }
 
@@ -26,8 +26,8 @@ const HK_RULE: SessionRule = {
   timeZone: 'Asia/Hong_Kong',
   weekday: [1, 2, 3, 4, 5],
   sessions: [
-    { start: '09:30', end: '12:00' },
-    { start: '13:00', end: '16:00' }
+    { start: '09:30', end: '12:00', lead: 5, trail: 0 },
+    { start: '13:00', end: '16:00', lead: 0, trail: 30 }
   ]
 }
 
@@ -36,13 +36,10 @@ const US_RULE: SessionRule = {
   label: '美股',
   timeZone: 'America/New_York',
   weekday: [1, 2, 3, 4, 5],
-  sessions: [{ start: '09:30', end: '16:00' }]
+  sessions: [{ start: '09:30', end: '16:00', lead: 5, trail: 30 }]
 }
 
 const RULES: Record<Market, SessionRule> = { cn: CN_RULE, hk: HK_RULE, us: US_RULE }
-
-export const OPEN_LEAD_MINUTES = 5
-export const CLOSE_TRAIL_MINUTES = 30
 
 function timeInZone(date: Date, timeZone: string): { minutes: number; weekday: number } {
   const fmt = new Intl.DateTimeFormat('en-US', {
@@ -86,28 +83,22 @@ export function anyMarketOpen(symbols: string[], now: Date = new Date()): boolea
   return false
 }
 
-function inSessionWindow(
-  rule: SessionRule,
-  now: Date,
-  withLead: boolean,
-  withTrail: boolean
-): boolean {
+function inSessionWindow(rule: SessionRule, now: Date, withTrail: boolean): boolean {
   const { minutes, weekday } = timeInZone(now, rule.timeZone)
   if (!rule.weekday.includes(weekday)) return false
-  const last = rule.sessions.length - 1
-  return rule.sessions.some((s, i) => {
-    const start = toMinutes(s.start) - (withLead && i === 0 ? OPEN_LEAD_MINUTES : 0)
-    const end = toMinutes(s.end) + (withTrail && i === last ? CLOSE_TRAIL_MINUTES : 0)
+  return rule.sessions.some((s) => {
+    const start = toMinutes(s.start) - (s.lead ?? 0)
+    const end = toMinutes(s.end) + (withTrail ? (s.trail ?? 0) : 0)
     return minutes >= start && minutes < end
   })
 }
 
 export function isMarketFetchOpen(market: Market, now: Date = new Date()): boolean {
-  return inSessionWindow(RULES[market], now, true, false)
+  return inSessionWindow(RULES[market], now, false)
 }
 
 export function isMarketOverlayShown(market: Market, now: Date = new Date()): boolean {
-  return inSessionWindow(RULES[market], now, true, true)
+  return inSessionWindow(RULES[market], now, true)
 }
 
 export function anyMarketFetchOpen(symbols: string[], now: Date = new Date()): boolean {
@@ -129,9 +120,7 @@ function nextOpenTimeForRule(rule: SessionRule, now: Date): number {
     const d = new Date(t)
     const { minutes, weekday } = timeInZone(d, rule.timeZone)
     if (!rule.weekday.includes(weekday)) continue
-    const targets = rule.sessions.map((s, i) =>
-      toMinutes(s.start) - (i === 0 ? OPEN_LEAD_MINUTES : 0)
-    )
+    const targets = rule.sessions.map((s) => toMinutes(s.start) - (s.lead ?? 0))
     if (targets.includes(minutes)) return t
   }
   return now.getTime() + 60_000
