@@ -215,9 +215,9 @@ const dualMeta = computed(() => {
   }
 })
 
-const scrollDuration = computed(() => {
-  const speed = bannerSettings.value.scrollSpeed
-  return `${Math.max(8, 64 - speed * 0.56) * 6}s`
+const scrollPxPerSec = computed(() => {
+  const speed = Math.min(100, Math.max(0, bannerSettings.value.scrollSpeed || 0))
+  return 8 + speed * 0.52
 })
 
 const bannerStyle = computed(() => {
@@ -232,7 +232,6 @@ const bannerStyle = computed(() => {
     '--bf': `${fontSize.value}px`,
     '--bw': String(fontWeight.value),
     '--ff': ff,
-    '--mt': scrollDuration.value,
     '--text-1': light ? '#101216' : '#e9ecf1',
     '--text-2': light ? '#4b525c' : '#a9b1bc',
     '--text-3': light ? '#8a919b' : '#6c747f'
@@ -294,9 +293,27 @@ function measureRows(): void {
   if (!samePack(packedRows.value, packed)) packedRows.value = packed
 }
 
+const scrollDurationCache = new WeakMap<HTMLElement, number>()
+
+function applyScrollDurations(): void {
+  const root = contentEl.value
+  if (!root) return
+  const pxPerSec = scrollPxPerSec.value
+  root.querySelectorAll<HTMLElement>('.line-scroll.scroll .line-track').forEach((track) => {
+    const distance = track.getBoundingClientRect().width / 2
+    if (!(distance > 1)) return
+    const seconds = Math.max(3, distance / pxPerSec)
+    const prev = scrollDurationCache.get(track)
+    if (prev !== undefined && Math.abs(prev - seconds) / seconds < 0.02) return
+    scrollDurationCache.set(track, seconds)
+    track.style.animationDuration = `${seconds.toFixed(2)}s`
+  })
+}
+
 function relayout(): void {
   reportHeight()
   measureRows()
+  void nextTick(() => requestAnimationFrame(applyScrollDurations))
 }
 
 function clearPressTimer(): void {
@@ -477,6 +494,7 @@ watch(
     pillSignature.value,
     bannerSettings.value.rows,
     bannerSettings.value.layout,
+    bannerSettings.value.scrollSpeed,
     bannerSettings.value.showMarketIndexes,
     bannerSettings.value.fontSize,
     bannerSettings.value.fontWeight,
@@ -521,7 +539,10 @@ onBeforeUnmount(() => {
   <div
     ref="contentEl"
     class="banner"
-    :class="[{ hidden, dragging: dragActive }, `layout-${layout}`]"
+    :class="[
+      { hidden, dragging: dragActive, 'click-through': bannerSettings.clickThrough },
+      `layout-${layout}`
+    ]"
     :style="bannerStyle"
     @pointerdown="onAreaPointerDown"
   >
@@ -899,11 +920,11 @@ onBeforeUnmount(() => {
 }
 
 .line-scroll.scroll .line-track {
-  animation: marquee var(--mt) linear infinite;
+  animation: marquee 30s linear infinite;
   will-change: transform;
 }
 
-.line-scroll.scroll:hover .line-track {
+.banner:not(.click-through) .line-scroll.scroll:hover .line-track {
   animation-play-state: paused;
 }
 
